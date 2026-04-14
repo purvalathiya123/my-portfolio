@@ -1,0 +1,472 @@
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;700;800&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  #game-root {
+    font-family: 'Nunito', sans-serif;
+    min-height: 600px;
+    background: linear-gradient(160deg, #1a0533 0%, #3b0f7a 50%, #6a1fa8 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 12px 30px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  #game-root::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 30% 20%, rgba(255,200,80,0.08) 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 80%, rgba(200,80,255,0.08) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  .hud {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 16px;
+    width: 100%;
+    max-width: 420px;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 2;
+  }
+
+  .stat-card {
+    background: rgba(255,255,255,0.12);
+    border: 1.5px solid rgba(255,255,255,0.2);
+    border-radius: 14px;
+    padding: 10px 18px;
+    text-align: center;
+    flex: 1;
+    backdrop-filter: blur(4px);
+  }
+
+  .stat-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: rgba(255,255,255,0.6);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+
+  .stat-val {
+    font-family: 'Fredoka One', cursive;
+    font-size: 26px;
+    color: #FFE066;
+    line-height: 1.2;
+    text-shadow: 0 0 12px rgba(255,220,50,0.5);
+  }
+
+  .level-badge {
+    font-family: 'Fredoka One', cursive;
+    font-size: 15px;
+    color: #fff;
+    background: rgba(255,255,255,0.15);
+    border: 1.5px solid rgba(255,255,255,0.25);
+    border-radius: 20px;
+    padding: 6px 16px;
+    white-space: nowrap;
+  }
+
+  #board-wrap {
+    background: rgba(255,255,255,0.06);
+    border: 2px solid rgba(255,255,255,0.15);
+    border-radius: 20px;
+    padding: 10px;
+    z-index: 2;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1);
+  }
+
+  #board {
+    display: grid;
+    grid-template-columns: repeat(8, 44px);
+    grid-template-rows: repeat(8, 44px);
+    gap: 4px;
+    position: relative;
+  }
+
+  .cell {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    position: relative;
+    transition: transform 0.08s ease;
+    user-select: none;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .cell:hover { transform: scale(1.06); }
+
+  .cell.selected {
+    outline: 3px solid #FFE066;
+    outline-offset: -2px;
+    transform: scale(1.1);
+    z-index: 3;
+    box-shadow: 0 0 16px rgba(255,220,50,0.7);
+  }
+
+  .cell.matching {
+    animation: pop 0.3s ease forwards;
+  }
+
+  .cell.falling {
+    animation: fallIn 0.25s ease-out forwards;
+  }
+
+  @keyframes pop {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.4); opacity: 0.7; }
+    100% { transform: scale(0); opacity: 0; }
+  }
+
+  @keyframes fallIn {
+    0% { transform: translateY(-30px); opacity: 0; }
+    100% { transform: translateY(0); opacity: 1; }
+  }
+
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    25% { transform: translateX(-4px); }
+    75% { transform: translateX(4px); }
+  }
+
+  .cell.shake { animation: shake 0.3s ease; }
+
+  .candy-0  { background: linear-gradient(135deg, #ff4e6a, #c0002a); }
+  .candy-1  { background: linear-gradient(135deg, #4ec4ff, #0060c0); }
+  .candy-2  { background: linear-gradient(135deg, #ffe04e, #c08000); }
+  .candy-3  { background: linear-gradient(135deg, #4eff8c, #00a040); }
+  .candy-4  { background: linear-gradient(135deg, #d14eff, #7000c0); }
+  .candy-5  { background: linear-gradient(135deg, #ff974e, #c05000); }
+
+  #msg {
+    font-family: 'Fredoka One', cursive;
+    font-size: 20px;
+    color: #FFE066;
+    margin-top: 14px;
+    min-height: 30px;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+    letter-spacing: 0.5px;
+    z-index: 2;
+    text-align: center;
+  }
+
+  #progress-bar-wrap {
+    width: 100%;
+    max-width: 420px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 30px;
+    height: 12px;
+    margin-top: 14px;
+    z-index: 2;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.2);
+  }
+
+  #progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #FFE066, #ff9d00);
+    border-radius: 30px;
+    transition: width 0.5s ease;
+    box-shadow: 0 0 8px rgba(255,200,0,0.6);
+  }
+
+  #restart-btn {
+    margin-top: 16px;
+    font-family: 'Fredoka One', cursive;
+    font-size: 16px;
+    background: linear-gradient(135deg, #FFE066, #ff9d00);
+    color: #1a0533;
+    border: none;
+    border-radius: 30px;
+    padding: 10px 30px;
+    cursor: pointer;
+    z-index: 2;
+    box-shadow: 0 4px 16px rgba(255,150,0,0.4);
+    transition: transform 0.1s;
+  }
+
+  #restart-btn:hover { transform: scale(1.05); }
+  #restart-btn:active { transform: scale(0.97); }
+
+  #overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(20,0,50,0.82);
+    z-index: 10;
+    border-radius: 12px;
+    gap: 12px;
+  }
+
+  .overlay-title {
+    font-family: 'Fredoka One', cursive;
+    font-size: 36px;
+    color: #FFE066;
+    text-shadow: 0 4px 20px rgba(255,200,0,0.7);
+  }
+
+  .overlay-sub {
+    font-family: 'Nunito', sans-serif;
+    font-size: 15px;
+    color: rgba(255,255,255,0.75);
+  }
+</style>
+
+<div id="game-root">
+  <div class="hud">
+    <div class="stat-card">
+      <div class="stat-label">Score</div>
+      <div class="stat-val" id="score-disp">0</div>
+    </div>
+    <div class="level-badge" id="level-disp">Level 1</div>
+    <div class="stat-card">
+      <div class="stat-label">Moves</div>
+      <div class="stat-val" id="moves-disp">30</div>
+    </div>
+  </div>
+
+  <div id="board-wrap">
+    <div id="board"></div>
+  </div>
+
+  <div id="progress-bar-wrap">
+    <div id="progress-bar" style="width:0%"></div>
+  </div>
+
+  <div id="msg">Swap candies to match 3 or more!</div>
+
+  <button id="restart-btn">New Game</button>
+</div>
+
+<script>
+const COLS = 8, ROWS = 8;
+const CANDY_COUNT = 6;
+const CANDIES = ['🍒','🍋','🍬','🍀','💜','🍊'];
+let board = [], selected = null, score = 0, moves = 30, busy = false, level = 1, target = 500;
+
+const boardEl = document.getElementById('board');
+const scoreEl = document.getElementById('score-disp');
+const movesEl = document.getElementById('moves-disp');
+const msgEl = document.getElementById('msg');
+const progressEl = document.getElementById('progress-bar');
+const levelEl = document.getElementById('level-disp');
+
+function rand(n) { return Math.floor(Math.random() * n); }
+
+function initBoard() {
+  board = [];
+  for (let r = 0; r < ROWS; r++) {
+    board[r] = [];
+    for (let c = 0; c < COLS; c++) {
+      let v;
+      do { v = rand(CANDY_COUNT); } while (wouldMatch(board, r, c, v));
+      board[r][c] = v;
+    }
+  }
+}
+
+function wouldMatch(b, r, c, v) {
+  if (c >= 2 && b[r][c-1] === v && b[r][c-2] === v) return true;
+  if (r >= 2 && b[r-1] && b[r-1][c] === v && b[r-2] && b[r-2][c] === v) return true;
+  return false;
+}
+
+function render() {
+  boardEl.innerHTML = '';
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const cell = document.createElement('div');
+      cell.className = 'cell candy-' + board[r][c];
+      cell.textContent = CANDIES[board[r][c]];
+      cell.dataset.r = r; cell.dataset.c = c;
+      if (selected && selected[0] === r && selected[1] === c) cell.classList.add('selected');
+      cell.addEventListener('click', () => onCellClick(r, c));
+      boardEl.appendChild(cell);
+    }
+  }
+  scoreEl.textContent = score;
+  movesEl.textContent = moves;
+  levelEl.textContent = 'Level ' + level;
+  const pct = Math.min(100, Math.round(score / target * 100));
+  progressEl.style.width = pct + '%';
+}
+
+function getCell(r, c) {
+  return boardEl.children[r * COLS + c];
+}
+
+function onCellClick(r, c) {
+  if (busy) return;
+  if (!selected) {
+    selected = [r, c];
+    getCell(r, c).classList.add('selected');
+    return;
+  }
+  const [sr, sc] = selected;
+  if (sr === r && sc === c) { selected = null; render(); return; }
+  const adjacent = (Math.abs(sr-r) + Math.abs(sc-c)) === 1;
+  if (!adjacent) {
+    selected = [r, c];
+    render();
+    return;
+  }
+  selected = null;
+  doSwap(sr, sc, r, c);
+}
+
+function doSwap(r1, c1, r2, c2) {
+  busy = true;
+  swap(r1, c1, r2, c2);
+  render();
+  const matches = findMatches();
+  if (!matches.length) {
+    swap(r1, c1, r2, c2);
+    render();
+    getCell(r1,c1).classList.add('shake');
+    getCell(r2,c2).classList.add('shake');
+    setTimeout(() => { getCell(r1,c1)?.classList.remove('shake'); getCell(r2,c2)?.classList.remove('shake'); busy = false; }, 350);
+    return;
+  }
+  moves--;
+  processMatches(matches);
+}
+
+function swap(r1,c1,r2,c2) {
+  [board[r1][c1], board[r2][c2]] = [board[r2][c2], board[r1][c1]];
+}
+
+function findMatches() {
+  const matched = new Set();
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS - 2; c++) {
+      if (board[r][c] !== -1 && board[r][c] === board[r][c+1] && board[r][c] === board[r][c+2]) {
+        let len = 3;
+        while (c+len < COLS && board[r][c+len] === board[r][c]) len++;
+        for (let i = 0; i < len; i++) matched.add(r*COLS+(c+i));
+      }
+    }
+  }
+  for (let c = 0; c < COLS; c++) {
+    for (let r = 0; r < ROWS - 2; r++) {
+      if (board[r][c] !== -1 && board[r][c] === board[r+1][c] && board[r][c] === board[r+2][c]) {
+        let len = 3;
+        while (r+len < ROWS && board[r+len][c] === board[r][c]) len++;
+        for (let i = 0; i < len; i++) matched.add((r+i)*COLS+c);
+      }
+    }
+  }
+  return [...matched];
+}
+
+async function processMatches(matches) {
+  matches.forEach(idx => {
+    const r = Math.floor(idx/COLS), c = idx%COLS;
+    const el = getCell(r, c);
+    if (el) el.classList.add('matching');
+    board[r][c] = -1;
+  });
+  const pts = matches.length * 50 * level;
+  score += pts;
+  showFloatingScore(pts);
+  await delay(320);
+  gravity();
+  fillTop();
+  render();
+  await delay(200);
+  const newMatches = findMatches();
+  if (newMatches.length) {
+    await delay(100);
+    processMatches(newMatches);
+  } else {
+    checkLevel();
+    if (moves <= 0) showGameOver();
+    busy = false;
+    updateMsg();
+  }
+}
+
+function gravity() {
+  for (let c = 0; c < COLS; c++) {
+    let write = ROWS-1;
+    for (let r = ROWS-1; r >= 0; r--) {
+      if (board[r][c] !== -1) { board[write][c] = board[r][c]; if (write !== r) board[r][c] = -1; write--; }
+    }
+    for (let r = write; r >= 0; r--) board[r][c] = -1;
+  }
+}
+
+function fillTop() {
+  for (let r = 0; r < ROWS; r++)
+    for (let c = 0; c < COLS; c++)
+      if (board[r][c] === -1) board[r][c] = rand(CANDY_COUNT);
+}
+
+function checkLevel() {
+  if (score >= target) {
+    level++;
+    target = level * 500 + (level-1)*200;
+    moves = 25 + Math.max(0, 10 - level);
+    msgEl.textContent = '🎉 Level ' + level + '! Target: ' + target;
+  }
+}
+
+function updateMsg() {
+  if (moves <= 5) msgEl.textContent = '⚠️ Only ' + moves + ' moves left!';
+  else if (score >= target * 0.8) msgEl.textContent = 'Almost there! Keep going!';
+  else msgEl.textContent = 'Match 3 or more to score!';
+}
+
+function showGameOver() {
+  const ov = document.createElement('div');
+  ov.id = 'overlay';
+  ov.innerHTML = score >= target
+    ? `<div class="overlay-title">You Win! 🎉</div><div class="overlay-sub">Score: ${score} — Level ${level}</div>`
+    : `<div class="overlay-title">Game Over 😢</div><div class="overlay-sub">Score: ${score} | Target: ${target}</div>`;
+  const btn = document.createElement('button');
+  btn.id = 'restart-btn';
+  btn.textContent = 'Play Again';
+  btn.style.marginTop = '0';
+  btn.addEventListener('click', () => { ov.remove(); startGame(); });
+  ov.appendChild(btn);
+  document.getElementById('board-wrap').style.position = 'relative';
+  document.getElementById('board-wrap').appendChild(ov);
+}
+
+function showFloatingScore(pts) {
+  const el = document.createElement('div');
+  el.textContent = '+' + pts;
+  el.style.cssText = `position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:'Fredoka One',cursive;font-size:28px;color:#FFE066;text-shadow:0 2px 8px rgba(0,0,0,0.6);pointer-events:none;z-index:20;animation:floatUp 0.8s ease forwards;`;
+  const style = document.createElement('style');
+  style.textContent = '@keyframes floatUp{0%{opacity:1;transform:translate(-50%,-60px)}100%{opacity:0;transform:translate(-50%,-120px)}}';
+  document.getElementById('board-wrap').style.position = 'relative';
+  document.getElementById('board-wrap').appendChild(style);
+  document.getElementById('board-wrap').appendChild(el);
+  setTimeout(() => el.remove(), 900);
+}
+
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function startGame() {
+  score = 0; moves = 30; level = 1; target = 500; selected = null; busy = false;
+  initBoard();
+  render();
+  msgEl.textContent = 'Swap candies to match 3 or more!';
+}
+
+document.getElementById('restart-btn').addEventListener('click', startGame);
+startGame();
+</script>
